@@ -1,8 +1,42 @@
-import React from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { View, StyleSheet, Text } from 'react-native'
 import Icon from '@expo/vector-icons/FontAwesome5'
+import api from '../services/api'
+import { onChangeVaga } from '../services/socketio'
+import { splitArray } from '../utils/util'
 
 export default function Home() {
+  const [vagas, setVagas] = useState([])
+  const [totalVagas, setTotalVagas] = useState(12)
+  const [empty, setEmpty] = useState(12)
+  const [occupied, setOccupied] = useState(0)
+
+  const getVagas = useCallback(() => {
+    api.get("/api/vagas")
+      .then(res => {
+        setVagas(res.data)
+
+        const totalEmpty = res.data.filter(vaga => !vaga.status)
+
+        setTotalVagas(res.data.length)
+        setOccupied(res.data.length - totalEmpty.length)
+        setEmpty(totalEmpty.length)
+      })
+      .catch(err => {
+        console.log(err)
+      })
+  }, [])
+
+  useEffect(() => {
+    getVagas()
+  }, [])
+
+  useEffect(() => {
+    onChangeVaga(() => {
+      getVagas()
+    })
+  }, [])
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -11,63 +45,79 @@ export default function Home() {
       </View>
 
       <View style={styles.subtitle}>
-        <Text style={styles.total} >Vagas: 12</Text>
-        <Text style={styles.ocupadas} >Ocupadas: 0</Text>
-        <Text style={styles.vazias} >Vazias: 12</Text>
+        <Text style={styles.total} >Vagas: {totalVagas}</Text>
+        <Text style={styles.ocupadas} >Ocupadas: {occupied}</Text>
+        <Text style={styles.vazias} >Vazias: {empty}</Text>
       </View>
 
       <View style={styles.parking}>
 
         <View style={styles.leftVagas}>
-          <View style={styles.leftVaga}>
-            <Icon name="wheelchair" size={28} style={styles.icon} />
-          </View>
+          {splitArray(vagas, 2)[0]?.map(vaga => {
+            const backgroundColor = vaga.status ? "red" : "#009900"
 
-          <View style={styles.leftVaga} >
-            <Text style={styles.leftNumber} >2</Text>
-          </View>
+            if (vaga.type === "DEFICIENTE") {
+              return (
+                <View key={vaga._id} style={styles.leftVaga}>
+                  <View style={[styles.vagaText, { backgroundColor }]}>
+                    <Icon name="wheelchair" size={28} color="#FFF" style={styles.iconLeft} />
+                  </View>
+                </View>
+              )
+            }
 
-          <View style={styles.leftVaga}>
-            <Text style={styles.leftNumber} >3</Text>
-          </View>
+            else if (vaga.type === "IDOSO") {
+              return (
+                <View key={vaga._id} style={styles.leftVaga} >
+                  <View style={[styles.vagaText, { backgroundColor }]}>
+                    <Text style={styles.oldman}>I</Text>
+                  </View>
+                </View>
+              )
+            }
 
-          <View style={styles.leftVaga}>
-            <Text style={styles.leftNumber} >4</Text>
-          </View>
-
-          <View style={styles.leftVaga}>
-            <Text style={styles.leftNumber} >5</Text>
-          </View>
-
-          <View style={styles.leftVaga}>
-            <Text style={styles.leftNumber} >6</Text>
-          </View>
+            return (
+              <View key={vaga._id} style={styles.leftVaga}>
+                <View style={[styles.vagaText, { backgroundColor }]}>
+                  <Text style={styles.leftNumber} >{vaga.number}</Text>
+                </View>
+              </View>
+            )
+          })}
         </View>
 
         <View style={styles.rightVagas}>
-          <View style={styles.rightVaga}>
-            <Text style={styles.rightNumber} >7</Text>
-          </View>
+          {splitArray(vagas, 2)[1]?.map(vaga => {
+            const backgroundColor = vaga.status ? "red" : "#009900"
 
-          <View style={styles.rightVaga}>
-            <Text style={styles.rightNumber} >8</Text>
-          </View>
+            if (vaga.type === "DEFICIENTE") {
+              return (
+                <View key={vaga._id} style={styles.rightVaga}>
+                  <View style={[styles.vagaText, { backgroundColor }]}>
+                    <Icon name="wheelchair" size={28} color="#FFF" style={styles.iconRight} />
+                  </View>
+                </View>
+              )
+            }
 
-          <View style={styles.rightVaga}>
-            <Text style={styles.rightNumber} >9</Text>
-          </View>
+            else if (vaga.type === "IDOSO") {
+              return (
+                <View key={vaga._id} style={styles.rightVaga} >
+                  <View style={[styles.vagaText, { backgroundColor }]}>
+                    <Text style={styles.oldman}>I</Text>
+                  </View>
+                </View>
+              )
+            }
 
-          <View style={styles.rightVaga}>
-            <Text style={styles.rightNumber} >10</Text>
-          </View>
-
-          <View style={styles.rightVaga}>
-            <Text style={styles.rightNumber} >11</Text>
-          </View>
-
-          <View style={styles.rightVaga}>
-            <Text style={styles.rightNumber} >12</Text>
-          </View>
+            return (
+              <View key={vaga._id} style={styles.rightVaga}>
+                <View style={[styles.vagaText, { backgroundColor }]}>
+                  <Text style={styles.rightNumber} >{vaga.number}</Text>
+                </View>
+              </View>
+            )
+          })}
         </View>
 
       </View>
@@ -145,6 +195,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  vagaText: {
+    width: 40,
+    height: 40,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
   leftNumber: {
     fontSize: 24,
     fontWeight: '700',
@@ -152,9 +210,19 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '270deg' }]
   },
 
-  icon: {
-    color: '#48cae4',
+  oldman: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
     transform: [{ rotate: '270deg' }]
+  },
+
+  iconLeft: {
+    transform: [{ rotate: '270deg' }]
+  },
+
+  iconRight: {
+    transform: [{ rotate: '90deg' }]
   },
 
   rightVaga: {
