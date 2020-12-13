@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { View, StyleSheet, Text } from 'react-native'
+import { View, StyleSheet, Text, Image } from 'react-native'
 import Icon from '@expo/vector-icons/FontAwesome5'
 import api from '../services/api'
 import { onChangeVaga } from '../services/socketio'
@@ -16,11 +16,9 @@ export default function Home() {
       .then(res => {
         setVagas(res.data)
 
-        const totalEmpty = res.data.filter(vaga => !vaga.status)
-
         setTotalVagas(res.data.length)
-        setOccupied(res.data.length - totalEmpty.length)
-        setEmpty(totalEmpty.length)
+        setOccupied(res.data.filter(vaga => vaga.status).length)
+        setEmpty(res.data.filter(vaga => !vaga.status).length)
       })
       .catch(err => {
         console.log(err)
@@ -29,13 +27,23 @@ export default function Home() {
 
   useEffect(() => {
     getVagas()
-  }, [])
+  }, [getVagas])
 
   useEffect(() => {
-    onChangeVaga(() => {
-      getVagas()
+    onChangeVaga(vaga => {
+      setVagas(vagas =>
+        vagas.map(value => {
+          if (value._id === vaga._id) {
+            return {
+              ...value,
+              status: vaga.status
+            }
+          }
+
+          return value
+        }))
     })
-  }, [])
+  }, [onChangeVaga])
 
   return (
     <View style={styles.container}>
@@ -45,9 +53,9 @@ export default function Home() {
       </View>
 
       <View style={styles.subtitle}>
-        <Text style={styles.total} >Vagas: {totalVagas}</Text>
-        <Text style={styles.ocupadas} >Ocupadas: {occupied}</Text>
-        <Text style={styles.vazias} >Vazias: {empty}</Text>
+        <Text style={styles.total} >Vagas: <Text style={{ fontWeight: 'bold' }}>{totalVagas}</Text></Text>
+        <Text style={styles.ocupadas} >Ocupadas: <Text style={{ fontWeight: 'bold' }}>{occupied}</Text></Text>
+        <Text style={styles.vazias} >Vazias: <Text style={{ fontWeight: 'bold' }}>{empty}</Text></Text>
       </View>
 
       <View style={styles.parking}>
@@ -60,7 +68,7 @@ export default function Home() {
               return (
                 <View key={vaga._id} style={styles.leftVaga}>
                   <View style={[styles.vagaText, { backgroundColor }]}>
-                    <Icon name="wheelchair" size={28} color="#FFF" style={styles.iconLeft} />
+                    <Icon name="wheelchair" size={24} color="#FFF" style={styles.iconLeft} />
                   </View>
                 </View>
               )
@@ -70,7 +78,7 @@ export default function Home() {
               return (
                 <View key={vaga._id} style={styles.leftVaga} >
                   <View style={[styles.vagaText, { backgroundColor }]}>
-                    <Text style={styles.oldman}>I</Text>
+                    <Image source={require('../../assets/old-man.png')} style={[styles.oldman, styles.oldmanLeft]} />
                   </View>
                 </View>
               )
@@ -79,7 +87,7 @@ export default function Home() {
             return (
               <View key={vaga._id} style={styles.leftVaga}>
                 <View style={[styles.vagaText, { backgroundColor }]}>
-                  <Text style={styles.leftNumber} >{vaga.number}</Text>
+                  <Text style={styles.leftNumber}>{vaga.number}</Text>
                 </View>
               </View>
             )
@@ -94,7 +102,7 @@ export default function Home() {
               return (
                 <View key={vaga._id} style={styles.rightVaga}>
                   <View style={[styles.vagaText, { backgroundColor }]}>
-                    <Icon name="wheelchair" size={28} color="#FFF" style={styles.iconRight} />
+                    <Icon name="wheelchair" size={24} color="#FFF" style={styles.iconRight} />
                   </View>
                 </View>
               )
@@ -104,7 +112,7 @@ export default function Home() {
               return (
                 <View key={vaga._id} style={styles.rightVaga} >
                   <View style={[styles.vagaText, { backgroundColor }]}>
-                    <Text style={styles.oldman}>I</Text>
+                    <Image source={require('../../assets/old-man.png')} style={[styles.oldman, styles.oldmanRight]} />
                   </View>
                 </View>
               )
@@ -211,10 +219,16 @@ const styles = StyleSheet.create({
   },
 
   oldman: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
+    width: 24,
+    height: 24
+  },
+
+  oldmanLeft: {
     transform: [{ rotate: '270deg' }]
+  },
+
+  oldmanRight: {
+    transform: [{ rotate: '90deg' }]
   },
 
   iconLeft: {
